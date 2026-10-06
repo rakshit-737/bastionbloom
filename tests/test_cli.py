@@ -123,6 +123,25 @@ def test_html_command_writes_rendered_report(tmp_path):
     assert "{{ report" not in output.read_text()
 
 
+def test_sarif_output_is_valid_and_safe_for_code_scanning(tmp_path):
+    sensitive = "local-test-sarif-secret"
+    (tmp_path / "config.yml").write_text(f'password: "{sensitive}"')
+    output = tmp_path / "results.sarif"
+    result = runner.invoke(app, [
+        "--no-banner", "scan", str(tmp_path), "--format", "sarif", "--output", str(output),
+        "--fail-on", "none",
+    ])
+    assert result.exit_code == 0
+    document = json.loads(output.read_text())
+    run = document["runs"][0]
+    assert document["version"] == "2.1.0"
+    assert run["tool"]["driver"]["name"] == "BastionBloom"
+    assert run["results"][0]["ruleId"] == "SEC005"
+    assert run["results"][0]["locations"][0]["physicalLocation"]["region"]["startLine"] == 1
+    assert run["results"][0]["message"]["text"].endswith("[REDACTED]")
+    assert sensitive not in output.read_text()
+
+
 def test_version_rule_list_and_unknown_rule_error(tmp_path):
     assert runner.invoke(app, ["--version"]).exit_code == 0
     result = runner.invoke(app, ["rules"])
