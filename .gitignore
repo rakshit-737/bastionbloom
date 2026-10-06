@@ -13,3 +13,5 @@ htmlcov/
 !.env.example
 security-report.*
 bastionbloom-baseline.json
+site/
+.cache/
