@@ -1,0 +1,66 @@
+site_name: BastionBloom
+site_description: Local security intelligence - small clues, connected risks, actionable fixes.
+site_url: https://rakshit-737.github.io/bastionbloom/
+repo_url: https://github.com/rakshit-737/bastionbloom
+repo_name: rakshit-737/bastionbloom
+edit_uri: edit/main/docs/
+copyright: Copyright &copy; 2026 rakshit-737 · MIT License
+strict: true
+
+theme:
+  name: material
+  font: false
+  logo: assets/logo.svg
+  favicon: assets/logo.svg
+  palette:
+    scheme: slate
+    primary: custom
+    accent: teal
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - content.action.edit
+    - search.suggest
+    - search.highlight
+    - toc.follow
+
+nav:
+  - Home: index.md
+  - Guides:
+      - Getting started: getting-started.md
+      - CLI guide: cli.md
+      - Working demo: demo.md
+  - Reference:
+      - Security rules: rules.md
+      - Startup banners: banners.md
+      - Architecture: architecture.md
+  - Development: development.md
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - toc:
+      permalink: true
+
+extra_css:
+  - assets/stylesheets/extra.css
+
+hooks:
+  - scripts/docs_hooks.py
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/rakshit-737/bastionbloom
