@@ -2,6 +2,7 @@
 
 import hashlib
 import re
+from pathlib import Path
 
 from bastionbloom.models import Finding
 from bastionbloom.rules import RULES
@@ -22,6 +23,7 @@ ASSIGNMENT = re.compile(
     r"\b(?P<name>[A-Za-z_][A-Za-z0-9_]*(?:-[A-Za-z0-9_]+)*)[\"']?\s*[:=]\s*"
     r"(?P<value>\"[^\"\r\n]*\"|'[^'\r\n]*'|[^\s,#;\r\n}\]]+)"
 )
+CODE_SUFFIXES = {".py", ".js", ".jsx", ".ts", ".tsx", ".go", ".rs", ".java", ".kt", ".cs"}
 
 
 def is_literal_credential(name: str, value: object) -> bool:
@@ -52,6 +54,8 @@ def scan_secrets(path: str, text: str) -> list[Finding]:
             covered.append(match.span())
     for match in ASSIGNMENT.finditer(text):
         name, value = match.group("name", "value")
+        if Path(path).suffix.lower() in CODE_SUFFIXES and not value.startswith(("\"", "'")):
+            continue
         if not is_literal_credential(name, value):
             continue
         start, end = match.span("value")
