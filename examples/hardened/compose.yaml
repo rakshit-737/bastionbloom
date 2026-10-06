@@ -1,0 +1,32 @@
+services:
+  database:
+    image: postgres:17.6
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/database_password
+    secrets:
+      - database_password
+    volumes:
+      - database_data:/var/lib/postgresql/data
+    networks:
+      - database_internal
+    security_opt:
+      - no-new-privileges:true
+  web:
+    image: nginxinc/nginx-unprivileged:1.27
+    ports:
+      - "127.0.0.1:8080:8080"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+secrets:
+  database_password:
+    file: ${DB_PASSWORD_FILE:?Set DB_PASSWORD_FILE to an existing secret file}
+volumes:
+  database_data:
+networks:
+  database_internal:
+    internal: true
