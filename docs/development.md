@@ -75,3 +75,19 @@ Pages publishing and OIDC permissions.
 
 The deployed site is [rakshit-737.github.io/bastionbloom](https://rakshit-737.github.io/bastionbloom/).
 The scanner-generated report lives at `/bastionbloom/demo-report/`.
+
+## GitHub Code Scanning
+
+The repository's `code-scanning.yml` workflow scans the repository and uploads
+`bastionbloom.sarif` to GitHub Code Scanning on pushes to `main`. Generated SARIF
+files are excluded from recursive scans, and the workflow grants only the
+`security-events: write` permission required by the upload step.
+
+For another repository, install BastionBloom and use the same two-step pattern:
+
+```yaml
+- run: bastionbloom --no-banner scan . --format sarif --output bastionbloom.sarif --fail-on none
+- uses: github/codeql-action/upload-sarif@<full-commit-sha>
+  with:
+    sarif_file: bastionbloom.sarif
+```
