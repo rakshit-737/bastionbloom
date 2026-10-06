@@ -2,6 +2,10 @@
 
 **Small clues. Connected risks.**
 
+[Documentation](https://rakshit-737.github.io/bastionbloom/) ·
+[Interactive demo](https://rakshit-737.github.io/bastionbloom/demo-report/) ·
+[Rule catalog](https://rakshit-737.github.io/bastionbloom/rules/)
+
 A useful, local-first cybersecurity project for developers and small teams:
 find accidentally committed credentials, risky Docker deployments, and unsafe
 GitHub Actions workflows before they become incidents.
@@ -37,6 +41,26 @@ Credential values are redacted from terminal output, JSON, HTML, and baselines.
 - **Before-and-after examples** and security-focused regression tests.
 - **Professional terminal identity:** three ASCII-only, 76-column banner styles
   with an optional compact startup display for narrow terminals.
+
+## Demo screenshots
+
+These screenshots are captured from the working CLI and its generated HTML
+report using the repository's synthetic example configurations.
+
+### Vulnerable configuration: 23 findings and three connected-risk checks
+
+![Actual CLI output with the startup banner and prioritized security findings](docs/assets/screenshots/cli-vulnerable.png)
+
+### Interactive HTML dashboard
+
+Search findings, filter by severity, inspect redacted evidence, and follow
+connected risks to their source checks. **[Open the live demo report](https://rakshit-737.github.io/bastionbloom/demo-report/).**
+
+[![Working HTML dashboard with scan statistics, filters, and remediation guidance](docs/assets/screenshots/html-dashboard.png)](https://rakshit-737.github.io/bastionbloom/demo-report/)
+
+### Hardened configuration: zero findings
+
+![Actual CLI output showing a clean scan of the hardened configurations](docs/assets/screenshots/cli-hardened.png)
 
 ## Install
 
@@ -199,11 +223,17 @@ GitHub Actions runs linting, security regressions, a repository self-scan, and
 package builds on Python 3.11, 3.12, 3.13, and 3.14. CI actions are commit-pinned
 and the workflow token has read-only repository permissions.
 
+The [documentation site](https://rakshit-737.github.io/bastionbloom/) is built
+with MkDocs Material and automatically deployed through GitHub Pages. See the
+[development guide](https://rakshit-737.github.io/bastionbloom/development/)
+for local previews and reproducible screenshot capture.
+
 ```text
 src/bastionbloom/   CLI, scanner, detectors, correlation, baselines, and reports
 examples/          Vulnerable and hardened sample configurations
 tests/             Credential privacy, parsing, scan-boundary, and CI behavior tests
-docs/              Rule catalog and copy-ready terminal banners
+docs/              Documentation site, rule catalog, banners, and demo screenshots
+scripts/           Reproducible demo capture and documentation build hooks
 ```
 
 ## License
