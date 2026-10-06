@@ -144,6 +144,9 @@ def scan(target: Path | str, options: ScanOptions | None = None) -> ScanResult:
             except (yaml.YAMLError, ValueError, TypeError, RecursionError):
                 # Parser errors may include source snippets, so never print them.
                 result.warnings.append(f"{relative}: configuration could not be fully parsed")
+    result.findings = [
+        finding for finding in result.findings if finding.rule.id not in options.exclude_rules
+    ]
     result.findings.extend(correlate(result.findings))
     unique = {
         finding.fingerprint: finding for finding in result.findings
