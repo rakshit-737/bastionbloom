@@ -8,6 +8,7 @@ from rich.console import Console
 from rich.table import Table
 
 from bastionbloom import __version__
+from bastionbloom.banner import BannerStyle, render_art, render_startup
 from bastionbloom.baseline import apply_baseline, load_baseline, save_baseline
 from bastionbloom.models import Severity
 from bastionbloom.output import write_text
@@ -41,10 +42,24 @@ class Threshold(StrEnum):
 
 
 @app.callback()
-def main(version: bool = typer.Option(False, "--version", is_eager=True)):
+def main(
+    ctx: typer.Context,
+    version: bool = typer.Option(False, "--version", is_eager=True),
+    banner_style: BannerStyle = typer.Option(BannerStyle.premium, "--banner-style"),
+    no_banner: bool = typer.Option(False, "--no-banner", help="Hide the startup banner."),
+):
     if version:
         typer.echo(f"BastionBloom {__version__}")
         raise typer.Exit()
+    ctx.obj = {"banner_style": banner_style, "no_banner": no_banner}
+
+
+def _startup(ctx: typer.Context) -> None:
+    settings = ctx.obj or {}
+    if not settings.get("no_banner", False):
+        console.print(render_startup(
+            settings.get("banner_style", BannerStyle.premium), terminal_width=console.width,
+        ), style="cyan", markup=False, highlight=False)
 
 
 def _options(target, exclude, exclude_rule, no_gitignore, max_file_kb, artifacts=()):
@@ -69,6 +84,7 @@ def _error(message):
 
 @app.command("scan")
 def scan_command(
+    ctx: typer.Context,
     target: Path = typer.Argument(Path("."), exists=True, file_okay=False, readable=True),
     format: Format = typer.Option(Format.text, "--format", "-f", help="Report format."),
     output: Path | None = typer.Option(None, "--output", "-o", help="Write report to a file."),
@@ -83,6 +99,8 @@ def scan_command(
     """Scan a project. Exit 0: threshold passed; 1: new risks; 2: incomplete scan/error."""
     if output is not None and baseline is not None and output.resolve() == baseline.resolve():
         _error("Report output must differ from the input baseline")
+    if format == Format.text or output is not None:
+        _startup(ctx)
     try:
         previous = load_baseline(baseline) if baseline else None
         result = run_scan(target, _options(
@@ -116,6 +134,7 @@ def scan_command(
 
 @app.command("baseline")
 def baseline_command(
+    ctx: typer.Context,
     target: Path = typer.Argument(Path("."), exists=True, file_okay=False, readable=True),
     output: Path = typer.Option(Path("bastionbloom-baseline.json"), "--output", "-o"),
     no_gitignore: bool = typer.Option(False, "--no-gitignore"),
@@ -124,6 +143,7 @@ def baseline_command(
     max_file_kb: int = typer.Option(1024, min=1),
 ):
     """Record current findings for later comparison; existing risks stay visible."""
+    _startup(ctx)
     try:
         result = run_scan(target, _options(
             target, exclude, exclude_rule, no_gitignore, max_file_kb, (output,),
@@ -138,8 +158,9 @@ def baseline_command(
 
 
 @app.command("rules")
-def rules_command(details: bool = typer.Option(False, "--details")):
+def rules_command(ctx: typer.Context, details: bool = typer.Option(False, "--details")):
     """List all supported checks and optionally their remediation guidance."""
+    _startup(ctx)
     table = Table(title="BastionBloom security rules")
     for name in ("ID", "Category", "Severity", "Check"):
         table.add_column(name)
@@ -150,3 +171,12 @@ def rules_command(details: bool = typer.Option(False, "--details")):
         for rule in RULES.values():
             console.print(f"\n{rule.id}: {rule.description}")
             console.print(f"Fix: {rule.remediation}")
+
+
+@app.command("banner")
+def banner_command(
+    style: BannerStyle = typer.Option(BannerStyle.premium, "--style"),
+    startup: bool = typer.Option(False, "--startup", help="Include version and tagline."),
+):
+    """Print a raw ASCII banner for copy/paste; no ANSI escapes or terminal wrapping."""
+    typer.echo(render_startup(style) if startup else render_art(style))
