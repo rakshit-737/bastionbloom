@@ -1,0 +1,12 @@
+# Nested static fixture: this is not an active workflow for the BastionBloom repository.
+name: Unsafe pull-request build example
+on: pull_request_target
+permissions: write-all
+jobs:
+  build:
+    runs-on: [self-hosted, linux]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - run: echo "${{ github.event.pull_request.title }}"
