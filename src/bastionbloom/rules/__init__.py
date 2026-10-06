@@ -4,7 +4,8 @@ from bastionbloom.models import Rule, Severity
 
 
 def _rule(code, category, severity, title, description, remediation):
-    return Rule(code, category, Severity(severity), title, description, remediation)
+    confidence = "medium" if code in {"SEC003", "SEC005", "DKR009", "ACT001", "ACT005"} else "high"
+    return Rule(code, category, Severity(severity), title, description, remediation, confidence)
 
 
 RULES = {
