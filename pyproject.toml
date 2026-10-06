@@ -20,6 +20,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.3,<10", "ruff>=0.11,<1"]
+docs = ["mkdocs>=1.6,<2", "mkdocs-material>=9.6,<10"]
+screenshots = ["playwright>=1.50,<2"]
 
 [project.scripts]
 bastionbloom = "bastionbloom.cli:app"
