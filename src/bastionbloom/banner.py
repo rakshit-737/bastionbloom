@@ -36,7 +36,8 @@ PREMIUM = (
 def _frame(lines: tuple[str, ...], title: str = "", footer: str = "") -> str:
     top = "+" + (f"--[ {title} ]" if title else "").ljust(WIDTH - 2, "-") + "+"
     rows = [top, "|" + " " * (WIDTH - 2) + "|"]
-    rows.extend("| " + line.center(WIDTH - 4) + " |" for line in lines)
+    glyph_width = max(map(len, lines))
+    rows.extend("| " + line.ljust(glyph_width).center(WIDTH - 4) + " |" for line in lines)
     rows.append("|" + " " * (WIDTH - 2) + "|")
     if footer:
         rows.append("| " + footer.center(WIDTH - 4) + " |")
