@@ -1,0 +1,4 @@
+# These files deliberately contain synthetic insecure configurations and test strings.
+# Scanning examples/vulnerable directly still scans every demonstration fixture.
+tests/
+examples/vulnerable/
