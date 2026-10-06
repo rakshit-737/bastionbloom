@@ -34,6 +34,8 @@ Credential values are redacted from terminal output, JSON, HTML, and baselines.
 - **Offline HTML dashboard:** search, severity/status filters, connected-finding
   links, responsive layout, and print styling; no external assets.
 - **Automation-ready JSON:** versioned schema and reliable CI exit codes.
+- **SARIF for code scanning:** upload stable, redacted findings to GitHub Code
+  Scanning or another SARIF-compatible CI platform.
 - **Portable baselines:** keep existing findings visible while failing CI only
   for new or severity-escalated findings; track resolved findings.
 - **Bounded scanning:** nested `.gitignore` support, custom exclusions, size
@@ -101,6 +103,7 @@ example workflows are not active workflows in this repository.
 ```bash
 bastionbloom scan /path/to/project --details
 bastionbloom scan /path/to/project --format json --output security-report.json
+bastionbloom scan /path/to/project --format sarif --output bastionbloom.sarif --fail-on none
 bastionbloom scan /path/to/project --fail-on medium
 ```
 
