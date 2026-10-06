@@ -15,7 +15,7 @@ Use `bastionbloom --help` or `bastionbloom scan --help` for the current options.
 
 | Option | Default | Purpose |
 | --- | --- | --- |
-| `--format`, `-f` | `text` | Select `text`, `json`, or `html` |
+| `--format`, `-f` | `text` | Select `text`, `json`, `html`, or `sarif` |
 | `--output`, `-o` | stdout | Save the report to a file |
 | `--baseline` | none | Compare an existing baseline |
 | `--fail-on` | `high` | Fail for new findings at this severity or higher |
@@ -27,6 +27,20 @@ Use `bastionbloom --help` or `bastionbloom scan --help` for the current options.
 
 JSON and HTML emitted directly to stdout never contain a startup banner. When
 writing a report to a file, a terminal summary is displayed separately.
+
+### SARIF for code scanning
+
+SARIF 2.1.0 maps severity to Code Scanning levels, includes stable fingerprints,
+source locations, rule metadata, and redacted messages:
+
+```bash
+bastionbloom scan . --format sarif --output bastionbloom.sarif --fail-on none
+```
+
+The file can be uploaded with GitHub's `upload-sarif` action or consumed by
+other SARIF-compatible CI systems. SARIF still includes all findings when a
+baseline is supplied; `isNew` is included as a result property so integrations
+can decide how to present accepted findings.
 
 ## Baseline comparison
 
