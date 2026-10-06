@@ -81,6 +81,7 @@
     <article class="{{ finding.severity }}" data-severity="{{ finding.severity }}" data-state="{{ 'new' if finding.is_new else 'existing' }}" id="finding-{{ finding.fingerprint }}">
       <div class="badges"><span class="badge {{ finding.severity }}">{{ finding.severity }}</span><span class="badge">{{ finding.rule_id }}</span><span class="badge">{{ finding.category }}</span><span class="badge {{ 'new' if finding.is_new else '' }}">{{ 'New' if finding.is_new else 'Existing' }}</span></div>
       <h2>{{ finding.title }}</h2>
+      <p class="muted">Detection confidence: {{ finding.confidence }} · confidence describes the static indicator, not verified exploitability.</p>
       <p class="muted"><code>{{ finding.path }}:{{ finding.line }}</code>{% if finding.service %} · Service: <code>{{ finding.service }}</code>{% endif %}</p>
       <p>{{ finding.description }}</p>
       <div class="evidence"><code>{{ finding.evidence }}</code></div>
