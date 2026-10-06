@@ -12,7 +12,13 @@ from bastionbloom.banner import BannerStyle, render_art, render_startup
 from bastionbloom.baseline import apply_baseline, load_baseline, save_baseline
 from bastionbloom.models import Severity
 from bastionbloom.output import write_text
-from bastionbloom.reports import print_console, render_html, render_json, render_text
+from bastionbloom.reports import (
+    print_console,
+    render_html,
+    render_json,
+    render_sarif,
+    render_text,
+)
 from bastionbloom.rules import RULES
 from bastionbloom.scanner import ScanOptions
 from bastionbloom.scanner import scan as run_scan
@@ -30,6 +36,7 @@ class Format(StrEnum):
     text = "text"
     json = "json"
     html = "html"
+    sarif = "sarif"
 
 
 class Threshold(StrEnum):
@@ -112,6 +119,8 @@ def scan_command(
             report = render_json(result)
         elif format == Format.html:
             report = render_html(result)
+        elif format == Format.sarif:
+            report = render_sarif(result)
         else:
             report = render_text(result, details)
         if output:
