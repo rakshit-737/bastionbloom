@@ -116,6 +116,14 @@
   search.addEventListener('input', filter);
   severity.addEventListener('change', filter);
   state.addEventListener('change', filter);
+  document.querySelectorAll('a[href^="#finding-"]').forEach(link => {
+    link.addEventListener('click', () => {
+      search.value = '';
+      severity.value = '';
+      state.value = '';
+      filter();
+    });
+  });
 </script>
 </body>
 </html>
