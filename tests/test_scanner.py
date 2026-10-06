@@ -52,6 +52,13 @@ def test_extra_excludes_and_builtin_dependency_pruning(tmp_path):
     assert result.scanned_files == 0
 
 
+def test_generated_report_formats_are_not_scanned_as_source(tmp_path):
+    (tmp_path / "results.sarif").write_text('password: "local-test-sarif-report-value"')
+    result = scan(tmp_path)
+    assert result.findings == []
+    assert result.scanned_files == 0
+
+
 def test_malformed_yaml_keeps_secret_findings_but_redacts_parse_errors(tmp_path):
     sensitive = "local-test-private-value"
     (tmp_path / "compose.yml").write_text(f'password: "{sensitive}"\nservices: [broken')
