@@ -1,0 +1,17 @@
+# Static demonstration fixture. BastionBloom reads this file; no deployment is needed.
+services:
+  database:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_PASSWORD: ""
+  management:
+    image: nginx:latest
+    privileged: true
+    ports:
+      - "8080:80"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /:/host:ro
