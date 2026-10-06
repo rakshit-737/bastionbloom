@@ -73,6 +73,28 @@ jobs:
     assert {finding.rule.id for finding in findings} == {"ACT001", "ACT002"}
 
 
+def test_sarif_upload_permission_is_allowed_but_unrelated_writes_are_not():
+    permitted = workflow("""on: push
+permissions: {}
+jobs:
+  report:
+    permissions: {security-events: write}
+    steps:
+      - uses: github/codeql-action/upload-sarif@1190a975f95ce23525efb6a3fc21ea29567c1b52
+        with: {sarif_file: results.sarif}
+""")
+    mixed = workflow("""on: push
+permissions: {}
+jobs:
+  report:
+    permissions: {contents: write, security-events: write}
+    steps:
+      - uses: github/codeql-action/upload-sarif@1190a975f95ce23525efb6a3fc21ea29567c1b52
+""")
+    assert permitted == []
+    assert [finding.rule.id for finding in mixed] == ["ACT001"]
+
+
 def test_yaml_on_key_and_boolean_values_are_preserved():
     document = load_document("on: pull_request_target\nprivileged: true\nname: yes\n")
     assert document.data["on"] == "pull_request_target"
