@@ -23,7 +23,7 @@ SKIP_DIRECTORIES = {
     ".git", ".hg", ".svn", ".venv", "venv", "node_modules", "__pycache__",
     ".pytest_cache", ".ruff_cache", ".mypy_cache", ".tox", "dist", "build",
 }
-DEFAULT_EXCLUDES = ("security-report.*", "bastionbloom-baseline.json")
+DEFAULT_EXCLUDES = ("security-report.*", "bastionbloom-baseline.json", "*.sarif")
 
 
 @dataclass(frozen=True)
