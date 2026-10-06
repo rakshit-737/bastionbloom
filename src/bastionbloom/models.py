@@ -30,6 +30,7 @@ class Rule:
     title: str
     description: str
     remediation: str
+    confidence: str = "high"
 
 
 @dataclass
@@ -56,6 +57,7 @@ class Finding:
             "rule_id": self.rule.id,
             "category": self.rule.category,
             "severity": self.rule.severity.value,
+            "confidence": self.rule.confidence,
             "title": self.rule.title,
             "description": self.rule.description,
             "remediation": self.rule.remediation,
