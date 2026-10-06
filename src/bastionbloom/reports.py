@@ -9,6 +9,7 @@ from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 
+from bastionbloom import __version__
 from bastionbloom.models import ScanResult, Severity
 
 COLORS = {"critical": "red", "high": "bright_red", "medium": "yellow", "low": "cyan"}
@@ -16,6 +17,72 @@ COLORS = {"critical": "red", "high": "bright_red", "medium": "yellow", "low": "c
 
 def render_json(result: ScanResult) -> str:
     return json.dumps(result.to_dict(), indent=2) + "\n"
+
+
+def render_sarif(result: ScanResult) -> str:
+    """Render SARIF 2.1.0 without copying secrets into the code-scanning log."""
+    rules = []
+    rule_indexes = {}
+    unique_rules = {finding.rule.id: finding for finding in result.findings}.values()
+    for index, finding in enumerate(unique_rules):
+        rule_indexes[finding.rule.id] = index
+        rules.append({
+            "id": finding.rule.id,
+            "name": finding.rule.title,
+            "shortDescription": {"text": finding.rule.title},
+            "fullDescription": {"text": finding.rule.description},
+            "help": {"text": finding.rule.remediation},
+            "properties": {
+                "category": finding.rule.category,
+                "confidence": finding.rule.confidence,
+                "severity": finding.rule.severity.value,
+            },
+        })
+    level = {"critical": "error", "high": "error", "medium": "warning"}
+    results = []
+    for finding in result.findings:
+        result_entry = {
+            "ruleId": finding.rule.id,
+            "ruleIndex": rule_indexes[finding.rule.id],
+            "level": level.get(finding.rule.severity.value, "note"),
+            "message": {"text": f"{finding.rule.title}: {finding.evidence}"},
+            "locations": [{
+                "physicalLocation": {
+                    "artifactLocation": {"uri": finding.path},
+                    "region": {"startLine": max(1, finding.line)},
+                }
+            }],
+            "fingerprints": {"bastionbloom/v1": finding.fingerprint},
+            "properties": {
+                "category": finding.rule.category,
+                "confidence": finding.rule.confidence,
+                "isNew": finding.is_new,
+                "service": finding.service,
+            },
+        }
+        if finding.related:
+            result_entry["relatedLocations"] = [
+                {"id": index, "physicalLocation": {"artifactLocation": {"uri": finding.path}}}
+                for index, _ in enumerate(finding.related)
+            ]
+        results.append(result_entry)
+    document = {
+        "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+        "version": "2.1.0",
+        "runs": [{
+            "tool": {
+                "driver": {
+                    "name": "BastionBloom",
+                    "informationUri": "https://github.com/rakshit-737/bastionbloom",
+                    "semanticVersion": __version__,
+                    "rules": rules,
+                }
+            },
+            "results": results,
+            "properties": {"target": result.target, "complete": not result.warnings},
+        }],
+    }
+    return json.dumps(document, indent=2) + "\n"
 
 
 def render_html(result: ScanResult) -> str:
