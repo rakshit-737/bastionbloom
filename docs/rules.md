@@ -59,16 +59,19 @@ version tag satisfies DKR010; image digest verification is not performed.
 
 | ID | Severity | Confidence | Detects |
 | --- | --- | --- | --- |
-| ACT001 | High | Medium | `write-all` or write permissions for selected sensitive scopes |
+| ACT001 | High | Medium | `write-all` or explicit writes to repository, identity, or deployment scopes |
 | ACT002 | Medium | High | Remote actions/reusable workflows without full commit pins; mutable container actions |
 | ACT003 | High | High | Known attacker-influenced event fields interpolated directly into `run` scripts |
 | ACT004 | Critical | High | `pull_request_target` plus an official checkout of PR-controlled head code |
 | ACT005 | High | Medium | Pull-request jobs explicitly selecting self-hosted runner labels |
 
-Selected write scopes are contents, actions, packages, deployments, and
-security-events. Some workflows legitimately require these permissions;
-review their scope and exposure. Local actions are exempt from commit-pinning
-checks. Container actions require sha256 digests.
+The checked write scopes are actions, attestations, checks, contents, deployments,
+discussions, id-token, issues, models, packages, pages, pull-requests,
+security-events, and statuses. Some workflows legitimately require these
+permissions; review their scope and exposure. `security-events: write` is allowed
+when the job uploads SARIF. `id-token: write` can mint cloud identity tokens and
+should receive the same scrutiny as repository writes. Local actions are exempt
+from commit-pinning checks. Container actions require sha256 digests.
 
 ACT003 recognizes common issue/PR titles, bodies, head refs/labels, comments,
 reviews, discussions, and commit messages. Passing these fields through an
