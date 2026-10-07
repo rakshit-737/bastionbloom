@@ -23,6 +23,7 @@ def render_sarif(result: ScanResult) -> str:
     """Render SARIF 2.1.0 without copying secrets into the code-scanning log."""
     rules = []
     rule_indexes = {}
+    findings_by_fingerprint = {finding.fingerprint: finding for finding in result.findings}
     unique_rules = {finding.rule.id: finding for finding in result.findings}.values()
     for index, finding in enumerate(unique_rules):
         rule_indexes[finding.rule.id] = index
@@ -61,10 +62,21 @@ def render_sarif(result: ScanResult) -> str:
             },
         }
         if finding.related:
-            result_entry["relatedLocations"] = [
-                {"id": index, "physicalLocation": {"artifactLocation": {"uri": finding.path}}}
-                for index, _ in enumerate(finding.related)
-            ]
+            related_locations = []
+            for index, fingerprint in enumerate(finding.related):
+                related = findings_by_fingerprint.get(fingerprint)
+                if related is None:
+                    continue
+                related_locations.append({
+                    "id": index,
+                    "message": {"text": related.rule.title},
+                    "physicalLocation": {
+                        "artifactLocation": {"uri": related.path},
+                        "region": {"startLine": max(1, related.line)},
+                    },
+                })
+            if related_locations:
+                result_entry["relatedLocations"] = related_locations
         results.append(result_entry)
     document = {
         "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
