@@ -93,7 +93,8 @@ RULES = {
         ),
         _rule(
             "ACT001", "actions", "high", "Broad workflow token permissions",
-            "A workflow or job grants write-all or write access to sensitive repository scopes.",
+            "A workflow or job grants write-all or write access to repository, identity, or "
+            "deployment scopes.",
             "Use contents: read at workflow level and grant narrow job-level writes as needed.",
         ),
         _rule(
