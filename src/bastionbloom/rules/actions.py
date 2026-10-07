@@ -15,7 +15,14 @@ UNTRUSTED = re.compile(
     r"|github\.event\.(?:head_commit\.message|commits)"
 )
 PR_HEAD = re.compile(r"github\.event\.pull_request\.(?:head\.|merge_commit_sha)")
-WRITE_SCOPES = {"contents", "actions", "packages", "deployments", "security-events"}
+# These are the writable GITHUB_TOKEN scopes. security-events is allowed only
+# when the job actually uploads a SARIF report; every other write grant needs
+# an explicit review because it can mutate repository state or mint identity.
+WRITE_SCOPES = {
+    "actions", "attestations", "checks", "contents", "deployments", "discussions",
+    "id-token", "issues", "models", "packages", "pages", "pull-requests",
+    "security-events", "statuses",
+}
 
 
 def _unpinned(action: str) -> bool:
