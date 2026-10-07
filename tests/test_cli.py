@@ -10,7 +10,7 @@ from bastionbloom.baseline import apply_baseline, load_baseline, save_baseline
 from bastionbloom.cli import app
 from bastionbloom.models import Severity
 from bastionbloom.output import write_text
-from bastionbloom.reports import render_html
+from bastionbloom.reports import render_html, render_sarif
 from bastionbloom.scanner import scan
 
 runner = CliRunner()
@@ -140,6 +140,29 @@ def test_sarif_output_is_valid_and_safe_for_code_scanning(tmp_path):
     assert run["results"][0]["locations"][0]["physicalLocation"]["region"]["startLine"] == 1
     assert run["results"][0]["message"]["text"].endswith("[REDACTED]")
     assert sensitive not in output.read_text()
+
+
+def test_sarif_correlation_links_include_source_lines(tmp_path):
+    (tmp_path / "compose.yaml").write_text(
+        "services:\n"
+        "  database:\n"
+        "    image: postgres:17\n"
+        "    ports: [\"5432:5432\"]\n"
+        "    environment: {POSTGRES_PASSWORD: \"\"}\n"
+    )
+    document = json.loads(render_sarif(scan(tmp_path)))
+    correlation = next(
+        entry for entry in document["runs"][0]["results"] if entry["ruleId"] == "COR001"
+    )
+
+    related = correlation["relatedLocations"]
+    assert {location["message"]["text"] for location in related} == {
+        "Database port published beyond loopback",
+        "Database authentication weakened",
+    }
+    assert {location["physicalLocation"]["region"]["startLine"] for location in related} == {
+        4, 5,
+    }
 
 
 def test_version_rule_list_and_unknown_rule_error(tmp_path):
