@@ -83,6 +83,19 @@ jobs:
     assert [finding.rule.id for finding in findings] == ["ACT001", "ACT001"]
 
 
+def test_pages_deployment_scopes_are_allowed_for_deploy_pages_job():
+    findings = workflow("""on: push
+permissions:
+  contents: read
+jobs:
+  deploy:
+    permissions: {pages: write, id-token: write}
+    steps:
+      - uses: actions/deploy-pages@d6db90142b97b0f2c6f8b2c3d8f8b5f9a6f4d3e2
+""")
+    assert findings == []
+
+
 def test_sarif_upload_permission_is_allowed_but_unrelated_writes_are_not():
     permitted = workflow("""on: push
 permissions: {}
