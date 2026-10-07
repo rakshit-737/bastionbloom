@@ -31,7 +31,9 @@ writing a report to a file, a terminal summary is displayed separately.
 ### SARIF for code scanning
 
 SARIF 2.1.0 maps severity to Code Scanning levels, includes stable fingerprints,
-source locations, rule metadata, and redacted messages:
+source locations, rule metadata, and redacted messages. Connected-risk findings
+also include related locations for each contributing check, including its rule
+title and source line:
 
 ```bash
 bastionbloom scan . --format sarif --output bastionbloom.sarif --fail-on none
