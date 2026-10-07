@@ -50,12 +50,12 @@ def scan_actions(path: str, document: Document) -> list[Finding]:
             subject=identity or "/".join(str(key) for key in keys),
         ))
 
-    def permissions(value, *keys, allow_security_events=False):
+    def permissions(value, *keys, allow_scopes=()):
         if value == "write-all" or (
             isinstance(value, dict)
             and any(
                 value.get(scope) == "write"
-                and not (allow_security_events and scope == "security-events")
+                and scope not in allow_scopes
                 for scope in WRITE_SCOPES
             )
         ):
@@ -64,20 +64,7 @@ def scan_actions(path: str, document: Document) -> list[Finding]:
     jobs = document.data.get("jobs", {})
     if not isinstance(jobs, dict):
         raise ValueError("Invalid workflow jobs")
-    uploads_sarif = any(
-        isinstance(job, dict)
-        and any(
-            isinstance(step, dict)
-            and isinstance(step.get("uses"), str)
-            and step["uses"].lower().split("@", 1)[0] == "github/codeql-action/upload-sarif"
-            for step in job.get("steps", [])
-            if isinstance(job.get("steps", []), list)
-        )
-        for job in jobs.values()
-    )
-    permissions(
-        document.data.get("permissions"), "permissions", allow_security_events=uploads_sarif,
-    )
+    permissions(document.data.get("permissions"), "permissions")
     for job_name, job in jobs.items():
         if not isinstance(job_name, str) or not isinstance(job, dict):
             raise ValueError("Invalid workflow job")
@@ -85,15 +72,19 @@ def scan_actions(path: str, document: Document) -> list[Finding]:
         steps = job.get("steps", [])
         if not isinstance(steps, list):
             raise ValueError("Invalid workflow steps")
+        action_names = {
+            step["uses"].lower().split("@", 1)[0]
+            for step in steps
+            if isinstance(step, dict) and isinstance(step.get("uses"), str)
+        }
+        allowed_scopes = set()
+        if "github/codeql-action/upload-sarif" in action_names:
+            allowed_scopes.add("security-events")
+        if "actions/deploy-pages" in action_names:
+            allowed_scopes.update({"id-token", "pages"})
         permissions(
             job.get("permissions"), *prefix, "permissions",
-            allow_security_events=any(
-                isinstance(step, dict)
-                and isinstance(step.get("uses"), str)
-                and step["uses"].lower().split("@", 1)[0]
-                == "github/codeql-action/upload-sarif"
-                for step in steps
-            ),
+            allow_scopes=allowed_scopes,
         )
         if isinstance(job.get("uses"), str) and _unpinned(job["uses"]):
             add("ACT002", "Reusable workflow reference is not commit-pinned", *prefix, "uses")
