@@ -70,8 +70,10 @@ discussions, id-token, issues, models, packages, pages, pull-requests,
 security-events, and statuses. Some workflows legitimately require these
 permissions; review their scope and exposure. `security-events: write` is allowed
 when the job uploads SARIF. `id-token: write` can mint cloud identity tokens and
-should receive the same scrutiny as repository writes. Local actions are exempt
-from commit-pinning checks. Container actions require sha256 digests.
+should receive the same scrutiny as repository writes. `pages: write` and
+`id-token: write` are allowed together for a job that uses
+`actions/deploy-pages`. Local actions are exempt from commit-pinning checks.
+Container actions require sha256 digests.
 
 ACT003 recognizes common issue/PR titles, bodies, head refs/labels, comments,
 reviews, discussions, and commit messages. Passing these fields through an
