@@ -73,6 +73,16 @@ jobs:
     assert {finding.rule.id for finding in findings} == {"ACT001", "ACT002"}
 
 
+def test_identity_and_repository_write_scopes_are_inspected():
+    findings = workflow("""on: push
+permissions: {id-token: write}
+jobs:
+  release:
+    permissions: {pull-requests: write}
+""")
+    assert [finding.rule.id for finding in findings] == ["ACT001", "ACT001"]
+
+
 def test_sarif_upload_permission_is_allowed_but_unrelated_writes_are_not():
     permitted = workflow("""on: push
 permissions: {}
