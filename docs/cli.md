@@ -24,6 +24,7 @@ Use `bastionbloom --help` or `bastionbloom scan --help` for the current options.
 | `--exclude` | none | Add an ignore glob; repeatable |
 | `--exclude-rule` | none | Disable a known rule ID; repeatable |
 | `--max-file-kb` | `1024` | Set the per-file limit in KiB |
+| `--show-full-path` | off | Include the absolute scan target in reports |
 
 JSON and HTML emitted directly to stdout never contain a startup banner. When
 writing a report to a file, a terminal summary is displayed separately.
@@ -55,6 +56,11 @@ Existing findings stay visible. Only new findings or findings whose severity
 has increased fail the threshold. Credential fingerprints survive line moves
 but change when the credential value changes. Relative paths make baselines
 portable between checkouts.
+
+Without `--baseline`, reports label findings as **unbaselined** or **to review**;
+they are not regressions. Human-readable reports use a relative target label by
+default so they can be shared without exposing local usernames or directory
+layouts. Use `--show-full-path` when an exact target path is required.
 
 Keep exclusions and size limits consistent across scans. Incomplete scans
 cannot create baselines and do not claim that old findings have been resolved.

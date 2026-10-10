@@ -8,6 +8,8 @@ scanner runs, and the credential strings in the vulnerable fixture are synthetic
 The live report is regenerated from the current scanner and fixtures every time
 the documentation site builds. It supports search, severity/status filters,
 redacted evidence, recommended fixes, and links between connected findings.
+When correlations exist, a **Priority risks** panel puts those connected checks
+before the individual findings they summarize.
 
 ## 1. Inspect a vulnerable deployment
 
@@ -38,13 +40,23 @@ bastionbloom scan examples/vulnerable --format html --output security-report.htm
 
 ![Generated HTML report with interactive filters and remediation](assets/screenshots/html-dashboard.png)
 
+This demo has no baseline, so the report labels its findings **Unbaselined** and
+the summary calls them **Findings to review**. They are not classified as new
+regressions until you compare a later scan with a reviewed baseline.
+
 Try these interactions in the live report:
 
-1. Select **Critical** to isolate the highest-priority findings.
-2. Search for **COR001** to inspect the connected database risk.
-3. Expand **connected findings** to follow the source checks.
-4. Reset the severity filter and search for **SEC005** to view redacted
+1. Start in **Priority risks** and follow a linked check to its finding.
+2. Select **Critical** to isolate the highest-severity findings.
+3. Search for **COR001** to inspect the connected database risk.
+4. Expand **connected findings** to follow the source checks.
+5. Clear the filters, then search for **SEC005** to view redacted
    credential evidence.
+
+Search, severity, and baseline-status filters are written into the report URL.
+Copy that URL to share the same view; **Clear filters** resets every filter and
+removes its URL parameters. Links to findings also clear active filters so the
+destination is visible.
 
 The browser report is a static snapshot. Scanning remains a local CLI operation.
 
