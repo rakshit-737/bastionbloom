@@ -14,7 +14,23 @@ UNTRUSTED = re.compile(
     r"|github\.event\.(?:comment|review|discussion)\.(?:body|title)"
     r"|github\.event\.(?:head_commit\.message|commits)"
 )
-PR_HEAD = re.compile(r"github\.event\.pull_request\.(?:head\.|merge_commit_sha)")
+PR_HEAD = re.compile(
+    r"github\.event\.pull_request\.(?:head\.|merge_commit_sha|number)"
+    r"|github\.event\.number|refs/pull/[^\s}]+/head",
+    re.IGNORECASE,
+)
+TRUSTED_EVENT = re.compile(
+    r"github\.event_name\s*==\s*['\"](?:push|workflow_dispatch)['\"]",
+    re.IGNORECASE,
+)
+NON_PR_EVENT = re.compile(
+    r"github\.event_name\s*!=\s*['\"]pull_request['\"]",
+    re.IGNORECASE,
+)
+MAIN_REF = re.compile(
+    r"github\.ref\s*==\s*['\"]refs/heads/main['\"]",
+    re.IGNORECASE,
+)
 # These are the writable GITHUB_TOKEN scopes. security-events is allowed only
 # when the job actually uploads a SARIF report; every other write grant needs
 # an explicit review because it can mutate repository state or mint identity.
@@ -31,6 +47,34 @@ def _unpinned(action: str) -> bool:
     if action.startswith("docker://"):
         return DIGEST.search(action) is None
     return "@" not in action or COMMIT.fullmatch(action.rsplit("@", 1)[-1]) is None
+
+
+def _trusted_event_guard(condition, events: set[str]) -> bool:
+    """Recognize only simple conditions that keep a job off pull requests."""
+    if not isinstance(condition, str):
+        return False
+    expression = condition.strip()
+    if expression.startswith("${{") and expression.endswith("}}"):
+        expression = expression[3:-2].strip()
+    if not expression:
+        return False
+
+    for alternative in expression.split("||"):
+        terms = [term.strip().strip("() ") for term in alternative.split("&&")]
+        if not terms:
+            return False
+        event_guard = None
+        for term in terms:
+            if TRUSTED_EVENT.fullmatch(term):
+                event_guard = term
+            elif NON_PR_EVENT.fullmatch(term):
+                if "pull_request_target" in events:
+                    return False
+            elif not MAIN_REF.fullmatch(term):
+                return False
+        if event_guard is None and not any(NON_PR_EVENT.fullmatch(term) for term in terms):
+            return False
+    return True
 
 
 def scan_actions(path: str, document: Document) -> list[Finding]:
@@ -78,9 +122,15 @@ def scan_actions(path: str, document: Document) -> list[Finding]:
             if isinstance(step, dict) and isinstance(step.get("uses"), str)
         }
         allowed_scopes = set()
-        if "github/codeql-action/upload-sarif" in action_names:
+        trusted_event_guard = _trusted_event_guard(job.get("if"), events)
+        if "github/codeql-action/upload-sarif" in action_names and (
+            not privileged_pr or trusted_event_guard
+        ):
             allowed_scopes.add("security-events")
-        if "actions/deploy-pages" in action_names:
+        if "actions/deploy-pages" in action_names and (
+            not events.intersection({"pull_request", "pull_request_target"})
+            or trusted_event_guard
+        ):
             allowed_scopes.update({"id-token", "pages"})
         permissions(
             job.get("permissions"), *prefix, "permissions",
