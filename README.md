@@ -116,8 +116,10 @@ bastionbloom scan /path/to/project --no-gitignore --details
 
 Dependency, build, and VCS directories such as `.venv`, `node_modules`, `dist`,
 and `.git` are always pruned. Regular UTF-8 files up to 1 MiB are scanned;
-binary, oversized, non-UTF-8, symlink, and special files are skipped.
-`--max-file-kb 2048` raises the per-file limit to 2 MiB.
+binary, symlink, and special files are skipped, while oversized or non-UTF-8
+files produce an incomplete-coverage warning. `--max-file-kb 2048` raises the
+per-file limit to 2 MiB. Human-readable reports use a relative target label by
+default; pass `--show-full-path` when an absolute path is needed.
 
 Structured checks recognize Compose filenames such as `compose.yaml` and
 `docker-compose.yml` (including dot-separated override variants),
@@ -182,7 +184,10 @@ or rotated credential gets the appropriate identity: moving its line does not
 reopen it, but changing its value does. Some checks use a line or step position
 when no stable logical identity is available.
 
-Keep scan exclusions and size limits consistent when comparing baselines.
+Keep scan exclusions and size limits consistent when comparing baselines. When
+no baseline is supplied, findings are unbaselined review items rather than
+regressions. Reports use a relative target label by default; `--show-full-path`
+opts into the absolute scan path.
 An incomplete scan cannot create a baseline and does not claim resolved findings.
 Report/baseline output files are automatically excluded from their own scan.
 

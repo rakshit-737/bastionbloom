@@ -62,6 +62,94 @@ jobs:
     assert findings == []
 
 
+@pytest.mark.parametrize("ref", [
+    "refs/pull/${{ github.event.number }}/head",
+    "refs/pull/${{ github.event.pull_request.number }}/head",
+])
+def test_privileged_workflow_detects_pull_request_ref_variants(ref):
+    findings = workflow(f"""on: pull_request_target
+permissions: {{contents: read}}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: {ref}
+""")
+    assert "ACT004" in {finding.rule.id for finding in findings}
+
+
+@pytest.mark.parametrize("action, permissions", [
+    (
+        "github/codeql-action/upload-sarif",
+        "security-events: write",
+    ),
+    (
+        "actions/deploy-pages",
+        "pages: write\n      id-token: write",
+    ),
+])
+def test_privileged_workflow_does_not_hide_scoped_writes(action, permissions):
+    findings = workflow(f"""on: pull_request_target
+permissions: {{contents: read}}
+jobs:
+  privileged:
+    permissions:
+      {permissions}
+    steps:
+      - uses: {action}@11d5960a326750d5838078e36cf38b85af677262
+""")
+    assert "ACT001" in {finding.rule.id for finding in findings}
+
+
+def test_pages_permissions_require_a_trusted_event_guard_when_pr_is_enabled():
+    unguarded = workflow("""on: [push, pull_request]
+permissions: {contents: read}
+jobs:
+  deploy:
+    permissions: {pages: write, id-token: write}
+    steps:
+      - uses: actions/deploy-pages@11d5960a326750d5838078e36cf38b85af677262
+""")
+    guarded = workflow("""on: [push, pull_request]
+permissions: {contents: read}
+jobs:
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions: {pages: write, id-token: write}
+    steps:
+      - uses: actions/deploy-pages@11d5960a326750d5838078e36cf38b85af677262
+""")
+    assert [finding.rule.id for finding in unguarded] == ["ACT001"]
+    assert guarded == []
+
+
+def test_non_pr_pages_guard_remains_clean_with_manual_dispatch():
+    findings = workflow("""on: [push, pull_request, workflow_dispatch]
+permissions: {contents: read}
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    permissions: {pages: write, id-token: write}
+    steps:
+      - uses: actions/deploy-pages@11d5960a326750d5838078e36cf38b85af677262
+""")
+    assert findings == []
+
+
+def test_sarif_upload_is_clean_for_normal_push_and_pull_request_workflow():
+    findings = workflow("""on: [push, pull_request]
+permissions: {contents: read}
+jobs:
+  report:
+    permissions: {security-events: write}
+    steps:
+      - uses: github/codeql-action/upload-sarif@11d5960a326750d5838078e36cf38b85af677262
+""")
+    assert findings == []
+
+
 def test_job_scoped_writes_and_reusable_workflow_are_inspected():
     findings = workflow("""on: push
 permissions: {}

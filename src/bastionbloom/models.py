@@ -76,6 +76,7 @@ class ScanResult:
     target: str
     findings: list[Finding] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    coverage_gaps: list[str] = field(default_factory=list)
     scanned_files: int = 0
     skipped_files: int = 0
     duration_seconds: float = 0
@@ -86,6 +87,14 @@ class ScanResult:
     @property
     def new_findings(self) -> list[Finding]:
         return [finding for finding in self.findings if finding.is_new]
+
+    @property
+    def complete(self) -> bool:
+        return not self.warnings and not self.coverage_gaps
+
+    @property
+    def review_findings(self) -> list[Finding]:
+        return self.new_findings if self.baseline_applied else self.findings
 
     def fails_threshold(self, severity: Severity) -> bool:
         return any(f.rule.severity.rank <= severity.rank for f in self.new_findings)
@@ -101,14 +110,29 @@ class ScanResult:
                 "skipped_files": self.skipped_files,
                 "duration_seconds": round(self.duration_seconds, 3),
                 "findings": len(self.findings),
+                # Keep the historical count for consumers that use this field
+                # as the threshold-review set; status/baseline_status clarify
+                # that an unbaselined finding is not a regression.
                 "new_findings": len(self.new_findings),
+                "review_findings": len(self.review_findings),
                 "resolved_findings": self.resolved_count,
                 "baseline_applied": self.baseline_applied,
-                "complete": not self.warnings,
+                "baseline_status": "applied" if self.baseline_applied else "not_supplied",
+                "complete": self.complete,
+                "coverage_gaps": len(self.coverage_gaps),
                 "by_severity": {
                     s.value: sum(f.rule.severity == s for f in self.findings) for s in Severity
                 },
             },
             "warnings": self.warnings,
-            "findings": [f.to_dict() for f in self.findings],
+            "findings": [
+                {
+                    **finding.to_dict(),
+                    "status": (
+                        "new" if self.baseline_applied and finding.is_new
+                        else "existing" if self.baseline_applied else "unbaselined"
+                    ),
+                }
+                for finding in self.findings
+            ],
         }

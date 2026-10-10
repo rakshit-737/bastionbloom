@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def on_post_build(config, **kwargs) -> None:
     result = scan(ROOT / "examples" / "vulnerable")
-    if result.warnings:
+    if not result.complete:
         raise RuntimeError("Cannot publish an incomplete demonstration scan")
     # Publish a useful relative label rather than a CI worker's absolute path.
     result.target = "examples/vulnerable"

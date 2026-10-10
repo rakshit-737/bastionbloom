@@ -44,6 +44,16 @@ def test_loopback_publication_does_not_claim_public_exposure(port):
     assert not {"DKR005", "DKR006"} & codes(findings)
 
 
+def test_long_syntax_target_without_published_port_is_not_host_exposure():
+    findings = compose("""services:
+  db:
+    image: postgres:17
+    ports:
+      - target: 5432
+""")
+    assert not {"DKR005", "DKR006"} & codes(findings)
+
+
 def test_host_control_combinations_and_long_syntax():
     findings = compose("""services:
   management:
@@ -64,6 +74,23 @@ def test_host_control_combinations_and_long_syntax():
     assert codes(correlate(findings)) == {"COR002", "COR003"}
 
 
+@pytest.mark.parametrize("source", [
+    "/etc/nginx",
+    "/sys/kernel/../sysrq-trigger",
+    "/var/run/custom.sock",
+])
+def test_descendants_of_sensitive_host_paths_are_detected(source):
+    findings = compose(f"services:\n  app:\n    volumes: [{source}:/host:ro]\n")
+    assert "DKR003" in codes(findings)
+
+
+def test_dynamic_image_references_are_not_treated_as_verified():
+    compose_findings = compose("services:\n  app:\n    image: example/app:${IMAGE_TAG}\n")
+    dockerfile_findings = scan_dockerfile("Dockerfile", "FROM $BASE_IMAGE\n")
+    assert "DKR010" in codes(compose_findings)
+    assert "DKR010" in codes(dockerfile_findings)
+
+
 def test_correlation_never_connects_different_services_or_files():
     public = compose('services:\n  db:\n    image: postgres:17\n    ports: ["5432:5432"]')
     other_service = compose('services:\n  other:\n    environment: {POSTGRES_PASSWORD: ""}')
@@ -80,6 +107,17 @@ def test_list_environment_values_are_redacted():
     )
     assert "DKR008" in codes(findings)
     assert sensitive not in json.dumps([finding.to_dict() for finding in findings])
+
+
+def test_credential_rotation_changes_compose_fingerprint_without_exposing_value():
+    first = compose("services:\n  app:\n    environment: {AWS_SECRET_ACCESS_KEY: first-secret}\n")
+    rotated = compose(
+        "services:\n  app:\n    environment: {AWS_SECRET_ACCESS_KEY: second-secret}\n"
+    )
+    first_finding = next(f for f in first if f.rule.id == "DKR008")
+    rotated_finding = next(f for f in rotated if f.rule.id == "DKR008")
+    assert first_finding.fingerprint != rotated_finding.fingerprint
+    assert "first-secret" not in repr(first_finding)
 
 
 def test_runtime_secret_files_are_not_hardcoded_credentials():

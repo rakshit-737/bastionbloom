@@ -41,11 +41,15 @@ def apply_baseline(result: ScanResult, baseline: dict[str, Severity]) -> None:
         finding.is_new = previous is None or finding.rule.severity.rank < previous.rank
     present = {finding.fingerprint for finding in result.findings}
     # A partial scan cannot establish that old findings have really disappeared.
-    result.resolved_count = len(baseline.keys() - present) if not result.warnings else 0
+    result.resolved_count = (
+        len(baseline.keys() - present)
+        if not result.warnings and not result.coverage_gaps
+        else 0
+    )
 
 
 def save_baseline(result: ScanResult, path: Path) -> None:
-    if result.warnings:
+    if result.warnings or result.coverage_gaps:
         raise ValueError("Cannot create a baseline from an incomplete scan")
     data = {
         "schema_version": 1,

@@ -4,11 +4,24 @@
 
 From a repository checkout:
 
+### macOS/Linux
+
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e '.[dev,docs]'
 ```
+
+### Windows PowerShell
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e '.[dev,docs]'
+```
+
+If PowerShell blocks activation, run `Set-ExecutionPolicy -Scope Process
+ExecutionPolicy Bypass` and retry the activation line.
 
 ## Project checks
 

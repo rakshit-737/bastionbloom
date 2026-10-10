@@ -41,7 +41,7 @@ moving an identical value to another line within the same file does not.
 | DKR007 | High | High | Empty/known weak passwords and explicit trust/empty-password settings |
 | DKR008 | High | High | Literal credentials in Compose environment settings |
 | DKR009 | Medium | Medium | Final Dockerfile stage with no declared non-root user, or explicit root |
-| DKR010 | Low | High | Image references without versions or using `latest` |
+| DKR010 | Low | High | Image references without versions, using `latest`, or supplied dynamically |
 | DKR011 | Medium | High | Dockerfile `ADD` of an HTTP(S) resource |
 
 Short and long Compose port/volume syntax and mapping/list environment syntax
@@ -53,7 +53,8 @@ Public publication is a configuration indicator: host firewalls are not
 inspected. Variables and override-file combinations are not expanded. Base
 images are not pulled; DKR009 honors declared/inherited Dockerfile stage users
 but cannot establish the user supplied by an external base image. A fixed
-version tag satisfies DKR010; image digest verification is not performed.
+version tag avoids DKR010; dynamic variables are reported because their final
+image cannot be verified, and image digest verification is not performed.
 
 ## GitHub Actions
 

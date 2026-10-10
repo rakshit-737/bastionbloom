@@ -15,11 +15,11 @@ hide:
   </div>
 </section>
 
-<div class="bb-metrics">
-  <div class="bb-metric"><strong>24</strong><span>Security rules</span></div>
-  <div class="bb-metric"><strong>3</strong><span>Connected-risk checks</span></div>
-  <div class="bb-metric"><strong>0</strong><span>Source-code uploads</span></div>
-</div>
+<dl class="bb-metrics" aria-label="BastionBloom at a glance">
+  <div class="bb-metric"><dt>Security rules</dt><dd>24</dd></div>
+  <div class="bb-metric"><dt>Connected-risk checks</dt><dd>3</dd></div>
+  <div class="bb-metric"><dt>Source-code uploads</dt><dd>0</dd></div>
+</dl>
 
 ## Security review that keeps the context
 
@@ -45,17 +45,16 @@ Compose service so important combinations rise to the top.
 
 ## First scan in a minute
 
-```bash
-git clone https://github.com/rakshit-737/bastionbloom.git
-cd bastionbloom
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install .
+Install the minimal CLI using [Getting started](getting-started.md), then run
+this from the repository root:
+
+```text
 bastionbloom scan examples/hardened --fail-on low
 ```
 
-Python **3.11 or newer** is required. The scanner reads local files without
-executing project code, launching containers, or contacting scanned services.
+The command works in macOS/Linux shells and Windows PowerShell. Python **3.11 or
+newer** is required. The scanner reads local files without executing project
+code, launching containers, or contacting scanned services.
 
 ## Pick your next step
 

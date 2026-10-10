@@ -2,6 +2,7 @@
 
 import hashlib
 import re
+from bisect import bisect_right
 from pathlib import Path
 
 from bastionbloom.models import Finding
@@ -16,7 +17,8 @@ PATTERNS = [
     ("SEC004", re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{20,200}\b")),
 ]
 CREDENTIAL_NAME = re.compile(
-    r"(?:password|passwd|(?:^|_)pwd(?:$|_)|api_?key|access_token|auth_token|client_secret|secret_key)",
+    r"(?:password|passwd|(?:^|_)pwd(?:$|_)|api_?key|access_token|auth_token|"
+    r"client_secret|secret_key|secret_access_key|session_token|private_key)",
     re.IGNORECASE,
 )
 ASSIGNMENT = re.compile(
@@ -44,11 +46,17 @@ def is_literal_credential(name: str, value: object) -> bool:
 def scan_secrets(path: str, text: str) -> list[Finding]:
     findings = []
     covered: list[tuple[int, int]] = []
+    line_starts = [0]
+    line_starts.extend(index + 1 for index, char in enumerate(text) if char == "\n")
+
+    def line_number(position: int) -> int:
+        return bisect_right(line_starts, position)
+
     for code, pattern in PATTERNS:
         for match in pattern.finditer(text):
             value_hash = hashlib.sha256(match.group().encode()).hexdigest()
             findings.append(Finding(
-                RULES[code], path, text.count("\n", 0, match.start()) + 1,
+                RULES[code], path, line_number(match.start()),
                 "Matched credential material: [REDACTED]", subject=value_hash,
             ))
             covered.append(match.span())
@@ -63,7 +71,7 @@ def scan_secrets(path: str, text: str) -> list[Finding]:
             continue
         value_hash = hashlib.sha256(value.strip("\"'").encode()).hexdigest()
         findings.append(Finding(
-            RULES["SEC005"], path, text.count("\n", 0, match.start()) + 1,
+            RULES["SEC005"], path, line_number(match.start()),
             f"{name} = [REDACTED]", subject=f"{name}:{value_hash}",
         ))
     return findings

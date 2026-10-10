@@ -12,7 +12,10 @@ from rich.text import Text
 from bastionbloom import __version__
 from bastionbloom.models import ScanResult, Severity
 
-COLORS = {"critical": "red", "high": "bright_red", "medium": "yellow", "low": "cyan"}
+COLORS = {
+    "critical": "red", "high": "bright_red", "medium": "yellow",
+    "low": "cyan", "info": "bright_blue",
+}
 
 
 def render_json(result: ScanResult) -> str:
@@ -58,6 +61,10 @@ def render_sarif(result: ScanResult) -> str:
                 "category": finding.rule.category,
                 "confidence": finding.rule.confidence,
                 "isNew": finding.is_new,
+                "status": (
+                    "new" if result.baseline_applied and finding.is_new
+                    else "existing" if result.baseline_applied else "unbaselined"
+                ),
                 "service": finding.service,
             },
         }
@@ -91,7 +98,7 @@ def render_sarif(result: ScanResult) -> str:
                 }
             },
             "results": results,
-            "properties": {"target": result.target, "complete": not result.warnings},
+            "properties": {"target": result.target, "complete": result.complete},
         }],
     }
     return json.dumps(document, indent=2) + "\n"
@@ -102,8 +109,16 @@ def render_html(result: ScanResult) -> str:
         loader=PackageLoader("bastionbloom", "templates"),
         autoescape=select_autoescape(default=True),
     )
+    report = result.to_dict()
+    findings_by_fingerprint = {finding["fingerprint"]: finding for finding in report["findings"]}
+    priority_findings = [
+        finding for finding in report["findings"] if finding["category"] == "correlation"
+    ]
     return environment.get_template("report.html").render(
-        report=result.to_dict(), severities=[s.value for s in Severity],
+        report=report,
+        severities=[s.value for s in Severity],
+        related_findings=findings_by_fingerprint,
+        priority_findings=priority_findings,
         nonce=secrets.token_hex(16),
     )
 
@@ -113,7 +128,9 @@ def print_console(result: ScanResult, console: Console, details: bool = False) -
     console.print(f"Target: {result.target}", markup=False, highlight=False)
     console.print(
         f"{result.scanned_files} files scanned · {result.skipped_files} skipped · "
-        f"{len(result.findings)} findings · {len(result.new_findings)} new · "
+        f"{len(result.findings)} findings · "
+        f"{len(result.review_findings)} "
+        f"{'new' if result.baseline_applied else 'to review'} · "
         f"{result.duration_seconds:.2f}s"
     )
     if result.baseline_applied:
@@ -124,10 +141,14 @@ def print_console(result: ScanResult, console: Console, details: bool = False) -
             table.add_column(label, overflow="fold")
         for finding in result.findings:
             severity = finding.rule.severity.value
+            status = (
+                "new" if result.baseline_applied and finding.is_new
+                else "existing" if result.baseline_applied else "review"
+            )
             table.add_row(
                 Text(severity.upper(), style=COLORS.get(severity, "white")),
                 finding.rule.id, Text(f"{finding.path}:{finding.line}"),
-                finding.rule.title, "new" if finding.is_new else "existing",
+                finding.rule.title, status,
             )
         console.print(table)
     else:

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import ipaddress
+import posixpath
 import re
 
 from bastionbloom.models import Finding
@@ -32,7 +34,7 @@ def _loopback(host: str) -> bool:
 
 def _port(value: object) -> tuple[str, str] | None:
     if isinstance(value, dict):
-        if "target" not in value:
+        if "target" not in value or value.get("published") in (None, ""):
             return None
         return str(value.get("host_ip", "0.0.0.0")), str(value["target"])
     if not isinstance(value, (str, int)):
@@ -56,11 +58,35 @@ def _environment(value: object) -> dict:
     return {}
 
 
-def _mutable_image(image: str) -> bool:
-    if "@sha256:" in image or "$" in image:
-        return False
+def _image_issue(image: str) -> str | None:
+    if "$" in image:
+        return "dynamic"
+    if "@sha256:" in image:
+        return None
     name = image.rsplit("/", 1)[-1]
-    return ":" not in name or name.rsplit(":", 1)[-1] == "latest"
+    return "mutable" if ":" not in name or name.rsplit(":", 1)[-1] == "latest" else None
+
+
+def _normalized_source(source: str) -> str:
+    if not source.startswith("/"):
+        return source
+    return posixpath.normpath(source)
+
+
+def _sensitive_source(source: str) -> bool:
+    normalized = _normalized_source(source)
+    if normalized == "/":
+        return True
+    return any(
+        normalized == root or normalized.startswith(root.rstrip("/") + "/")
+        for root in SENSITIVE_PATHS
+        if root != "/"
+    )
+
+
+def _credential_identity(key: str, value: object) -> str:
+    normalized = str(value).strip().strip("\"'")
+    return f"{key}:{hashlib.sha256(normalized.encode()).hexdigest()}"
 
 
 def scan_compose(path: str, document: Document) -> list[Finding]:
@@ -84,8 +110,12 @@ def scan_compose(path: str, document: Document) -> list[Finding]:
             add("DKR004", "network_mode: host", "network_mode")
         image = str(service.get("image", ""))
         image_name = image.rsplit("/", 1)[-1].split(":")[0].split("@")[0].lower()
-        if image and _mutable_image(image):
-            add("DKR010", "Image has no version or uses latest", "image")
+        if image:
+            image_issue = _image_issue(image)
+            if image_issue == "dynamic":
+                add("DKR010", "Image reference is dynamic and cannot be verified", "image")
+            elif image_issue == "mutable":
+                add("DKR010", "Image has no version or uses latest", "image")
         volumes = service.get("volumes") or []
         if not isinstance(volumes, list):
             raise ValueError("Invalid Compose volumes")
@@ -96,9 +126,10 @@ def scan_compose(path: str, document: Document) -> list[Finding]:
                 source = str(volume.get("source", "")).rstrip("/") or "/"
             else:
                 continue
+            source = _normalized_source(source)
             if source in {"/var/run/docker.sock", "/run/docker.sock"}:
                 add("DKR002", "Docker daemon socket is bind-mounted", "volumes", index)
-            if source in SENSITIVE_PATHS or source.startswith(("/etc/", "/root/", "/proc/")):
+            if _sensitive_source(source):
                 add("DKR003", "Sensitive host directory is bind-mounted", "volumes", index)
         ports = service.get("ports") or []
         if not isinstance(ports, list):
@@ -127,7 +158,10 @@ def scan_compose(path: str, document: Document) -> list[Finding]:
                 add("DKR007", f"{key}: unsafe authentication setting [REDACTED]",
                     "environment", key, identity=key)
             if is_literal_credential(key, value):
-                add("DKR008", f"{key} = [REDACTED]", "environment", key, identity=key)
+                add(
+                    "DKR008", f"{key} = [REDACTED]", "environment", key,
+                    identity=_credential_identity(key, value),
+                )
     return findings
 
 
@@ -165,9 +199,12 @@ def scan_dockerfile(path: str, text: str) -> list[Finding]:
             non_root = stages.get(image.lower(), False)
             current_stage = tokens[-1].lower() if len(tokens) >= 3 else ""
             last_from_line, user_line = number, 0
-            if image.lower() not in stages and _mutable_image(image):
+            image_issue = _image_issue(image)
+            if image.lower() not in stages and image_issue:
                 findings.append(Finding(
-                    RULES["DKR010"], path, number, "Base image is unversioned or uses latest",
+                    RULES["DKR010"], path, number,
+                    "Base image reference is dynamic and cannot be verified"
+                    if image_issue == "dynamic" else "Base image is unversioned or uses latest",
                     subject=f"stage:{current_stage or number}",
                 ))
         elif command == "USER":
