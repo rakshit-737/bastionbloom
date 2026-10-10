@@ -24,7 +24,8 @@ def test_external_symlinks_binary_large_files_and_fifo_are_skipped(tmp_path):
     assert result.findings == []
     assert result.scanned_files == 1
     assert result.skipped_files >= 3
-    assert result.warnings == []
+    assert any("large.txt" in warning for warning in result.warnings)
+    assert result.to_dict()["summary"]["complete"] is False
 
 
 def test_nested_gitignore_and_explicit_reinclusion(tmp_path):

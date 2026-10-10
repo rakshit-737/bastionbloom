@@ -32,26 +32,42 @@ class ScanOptions:
     respect_gitignore: bool = True
     exclude: tuple[str, ...] = ()
     exclude_rules: frozenset[str] = frozenset()
+    show_full_path: bool = False
 
 
-def _read_text(path: Path, limit: int) -> str | None:
+def _read_text_with_reason(path: Path, limit: int) -> tuple[str | None, str | None]:
     # O_NONBLOCK prevents accidentally opening a FIFO from hanging the scan;
     # O_NOFOLLOW protects against a final-component symlink swap on Linux.
     flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
     if path.is_symlink():
-        return None
+        return None, "symlink"
     descriptor = os.open(path, flags)
     with os.fdopen(descriptor, "rb") as handle:
         metadata = os.fstat(handle.fileno())
         if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > limit:
-            return None
+            return None, "special" if not stat.S_ISREG(metadata.st_mode) else "oversized"
         content = handle.read(limit + 1)
     if len(content) > limit or b"\0" in content:
-        return None
+        return None, "oversized" if len(content) > limit else "binary"
     try:
-        return content.decode("utf-8-sig")
+        return content.decode("utf-8-sig"), None
     except UnicodeDecodeError:
-        return None
+        return None, "non-utf8"
+
+
+def _read_text(path: Path, limit: int) -> str | None:
+    """Read a bounded UTF-8 text file, retaining the old small helper API."""
+    text, _ = _read_text_with_reason(path, limit)
+    return text
+
+
+def _display_target(root: Path, show_full_path: bool) -> str:
+    if show_full_path:
+        return str(root)
+    try:
+        return root.relative_to(Path.cwd().resolve()).as_posix() or "."
+    except ValueError:
+        return root.name or "."
 
 
 def scan(target: Path | str, options: ScanOptions | None = None) -> ScanResult:
@@ -63,14 +79,14 @@ def scan(target: Path | str, options: ScanOptions | None = None) -> ScanResult:
         raise ValueError("File size limit must be positive")
     if options.exclude_rules - RULES.keys():
         raise ValueError("Unknown rule ID in exclusions")
-    result = ScanResult(str(root))
+    result = ScanResult(_display_target(root, options.show_full_path))
     started = time.perf_counter()
 
     def ignore_file(path: Path) -> list[str]:
         if not path.exists() or path.is_symlink():
             return []
         try:
-            text = _read_text(path, options.max_file_bytes)
+            text, _ = _read_text_with_reason(path, options.max_file_bytes)
             if text is None:
                 raise ValueError("Unreadable ignore file")
             return text.splitlines()
@@ -117,13 +133,18 @@ def scan(target: Path | str, options: ScanOptions | None = None) -> ScanResult:
                 result.skipped_files += 1
                 continue
             try:
-                text = _read_text(path, options.max_file_bytes)
+                text, reason = _read_text_with_reason(path, options.max_file_bytes)
             except OSError:
                 result.warnings.append(f"{relative}: file could not be read")
                 result.skipped_files += 1
                 continue
             if text is None:
                 result.skipped_files += 1
+                if reason in {"oversized", "non-utf8"}:
+                    result.coverage_gaps.append(relative)
+                    result.warnings.append(
+                        f"{relative}: {reason} file was skipped; scan coverage is incomplete"
+                    )
                 continue
             result.scanned_files += 1
             result.findings.extend(scan_secrets(relative, text))
