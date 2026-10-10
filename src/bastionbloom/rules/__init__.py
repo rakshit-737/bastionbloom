@@ -82,9 +82,11 @@ RULES = {
             "Set a non-root USER in the final stage. Verify the base image's default user.",
         ),
         _rule(
-            "DKR010", "docker", "low", "Mutable container image reference",
-            "An image uses latest or has no explicit tag/digest, allowing unexpected changes.",
-            "Pin an approved version; use a sha256 image digest for reproducible deployments.",
+            "DKR010", "docker", "low", "Mutable or dynamic container image reference",
+            "An image uses latest, has no explicit tag/digest, or is supplied dynamically, "
+            "so the scanner cannot verify what will run.",
+            "Pin an approved version; use a sha256 image digest for reproducible deployments "
+            "and validate any image supplied through a variable.",
         ),
         _rule(
             "DKR011", "docker", "medium", "Remote Dockerfile ADD",
