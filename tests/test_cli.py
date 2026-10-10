@@ -166,6 +166,7 @@ def test_sarif_output_is_valid_and_safe_for_code_scanning(tmp_path):
     assert run["results"][0]["ruleId"] == "SEC005"
     assert run["results"][0]["locations"][0]["physicalLocation"]["region"]["startLine"] == 1
     assert run["results"][0]["message"]["text"].endswith("[REDACTED]")
+    assert run["results"][0]["properties"]["status"] == "unbaselined"
     assert sensitive not in output.read_text()
 
 

@@ -6,46 +6,75 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-{{ nonce }}'; base-uri 'none'; form-action 'none'">
   <title>BastionBloom · Security report</title>
   <style>
-    :root { color-scheme: dark; --bg: #0a101a; --panel: #121d2b; --edge: #26344a; --ink: #edf3fb; --muted: #9aabc2; --mint: #5ee3bd; }
+    :root { color-scheme: dark; --bg: #0a101a; --panel: #121d2b; --edge: #26344a; --ink: #edf3fb; --muted: #9aabc2; --mint: #5ee3bd; --info: #93c5fd; }
     * { box-sizing: border-box; }
     body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.65 system-ui, sans-serif; }
     main { max-width: 1120px; margin: auto; padding: 48px 24px 80px; }
     header { border-bottom: 1px solid var(--edge); margin-bottom: 30px; padding-bottom: 26px; }
     .brand { color: var(--mint); font-size: 12px; letter-spacing: .18em; font-weight: 800; text-transform: uppercase; }
     h1 { font-size: clamp(30px, 5vw, 46px); margin: 8px 0; letter-spacing: -.04em; }
-    h2 { font-size: 18px; margin: 7px 0 16px; }
+    h2 { font-size: 18px; line-height: 1.35; margin: 7px 0 16px; }
     p { margin: 8px 0; }
     .muted, footer { color: var(--muted); }
     code { font-family: ui-monospace, monospace; overflow-wrap: anywhere; }
     .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 25px 0; }
-    .stat, article, .warning { background: var(--panel); border: 1px solid var(--edge); border-radius: 14px; }
-    .stat { padding: 18px 20px; }
-    .stat strong { display: block; font-size: 32px; letter-spacing: -.04em; }
-    .stat span { color: var(--muted); font-size: 13px; }
-    .controls { display: flex; gap: 12px; margin: 24px 0; flex-wrap: wrap; }
+    .stat, article, .warning, .notice, .priority { background: var(--panel); border: 1px solid var(--edge); border-radius: 14px; }
+    .stat { min-width: 0; padding: 18px 20px; }
+    .stat dd { margin: 0; font-size: 32px; letter-spacing: -.04em; }
+    .stat dt { color: var(--muted); font-size: 13px; }
+    .controls { display: flex; align-items: end; gap: 12px; margin: 24px 0; flex-wrap: wrap; }
     .control { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 160px; }
+    .control:last-child { flex: 0 1 180px; }
     label { color: var(--muted); font-size: 12px; }
-    input, select { width: 100%; padding: 12px; background: var(--panel); border: 1px solid var(--edge); border-radius: 8px; color: var(--ink); font: inherit; }
-    input:focus, select:focus { outline: 2px solid var(--mint); outline-offset: 2px; }
-    article { padding: 22px; margin: 16px 0; border-left: 4px solid var(--edge); }
+    input, select, button { width: 100%; min-height: 46px; padding: 10px 12px; background: var(--panel); border: 1px solid var(--edge); border-radius: 8px; color: var(--ink); font: inherit; }
+    button { cursor: pointer; color: var(--mint); font-weight: 700; }
+    button:hover { border-color: var(--mint); }
+    input:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
+    a { color: var(--mint); }
+    a:hover { color: #b8f8e8; }
+    article { padding: 22px; margin: 16px 0; border-left: 4px solid var(--edge); overflow-wrap: anywhere; scroll-margin-top: 18px; }
+    article:focus { outline: 2px solid var(--mint); outline-offset: 3px; }
+    article h2 { margin-top: 10px; }
     article.critical { border-left-color: #fb7185; }
     article.high { border-left-color: #fb923c; }
     article.medium { border-left-color: #facc15; }
     article.low { border-left-color: #60a5fa; }
+    article.info { border-left-color: var(--info); }
     .badges { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .badge { font-size: 11px; padding: 3px 9px; border-radius: 5px; background: #233247; text-transform: uppercase; font-weight: 700; letter-spacing: .04em; }
     .badge.critical { background: #442432; color: #fda4af; }
     .badge.high { background: #442d20; color: #fdba74; }
     .badge.medium { background: #3b351c; color: #fde047; }
     .badge.low { color: #93c5fd; }
+    .badge.info { color: var(--info); }
     .badge.new { background: #133c34; color: var(--mint); }
-    .evidence { background: #0b1421; padding: 12px; border-radius: 8px; margin: 14px 0; }
+    .evidence { background: #0b1421; padding: 12px; border-radius: 8px; margin: 14px 0; overflow-x: auto; }
     .fix { color: #c7f6e8; }
-    .warning { padding: 16px 20px; border-color: #b58b2b; margin: 18px 0; }
+    .warning, .notice, .priority { padding: 16px 20px; margin: 18px 0; }
+    .warning { border-color: #b58b2b; }
+    .notice { background: #10252b; border-color: #236152; }
+    .priority { background: #171d2c; border-color: #5b4e87; }
+    .priority ul { margin: 8px 0 0; padding-left: 22px; }
+    .priority li { margin: 7px 0; }
+    .priority small { color: var(--muted); }
+    details { margin-top: 15px; }
+    summary { cursor: pointer; color: var(--mint); }
     .empty { text-align: center; padding: 45px 20px; color: var(--muted); }
+    .empty strong { display: block; color: var(--ink); font-size: 19px; }
+    .empty button { width: auto; margin-top: 12px; }
     footer { margin-top: 35px; font-size: 12px; border-top: 1px solid var(--edge); padding-top: 20px; }
+    .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
     [hidden] { display: none !important; }
-    @media (max-width: 650px) { .stats { grid-template-columns: repeat(2, 1fr); } main { padding: 28px 16px; } }
+    @media (max-width: 650px) {
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .control, .control:last-child { min-width: 0; }
+      .control:first-child, .control:last-child { grid-column: 1 / -1; }
+      main { padding: 28px 16px; }
+      article { padding: 18px 16px; }
+    }
+    @media (max-width: 420px) { .stats { grid-template-columns: 1fr; } .stat { padding: 14px 16px; } .controls { display: flex; } .control, .control:last-child { flex-basis: 100%; } }
+    @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
     @media print { :root { --bg: white; --panel: white; --ink: black; --muted: #555; --edge: #ccc; } .controls { display: none; } article { break-inside: avoid; } .evidence { background: #eee; } .fix { color: #164; } }
   </style>
 </head>
@@ -55,44 +84,60 @@
     <div class="brand">BastionBloom / Local security intelligence</div>
     <h1>Small clues. Connected risks.</h1>
     <p class="muted">Security report for <code>{{ report.target }}</code></p>
-    <p class="muted">{{ report.generated_at }} · v{{ report.tool.version }} · {{ report.summary.duration_seconds }} seconds</p>
+    <p class="muted"><time datetime="{{ report.generated_at }}">{{ report.generated_at }}</time> · v{{ report.tool.version }} · {% if report.summary.duration_seconds < 1 %}&lt;1 second{% else %}{{ report.summary.duration_seconds }} seconds{% endif %}</p>
   </header>
-  <section class="stats" aria-label="Scan summary">
-    <div class="stat"><strong>{{ report.summary.findings }}</strong><span>Total findings</span></div>
-    <div class="stat"><strong>{{ report.summary.new_findings }}</strong><span>New findings</span></div>
-    <div class="stat"><strong>{{ report.summary.by_severity.critical }}</strong><span>Critical findings</span></div>
-    <div class="stat"><strong>{{ report.summary.scanned_files }}</strong><span>Files scanned</span></div>
-  </section>
+  <dl class="stats" aria-label="Scan summary">
+    <div class="stat"><dt>Total findings</dt><dd>{{ report.summary.findings }}</dd></div>
+    <div class="stat"><dt>{% if report.summary.baseline_applied %}New since baseline{% else %}Findings to review{% endif %}</dt><dd>{{ report.summary.new_findings if report.summary.baseline_applied else report.summary.findings }}</dd></div>
+    <div class="stat"><dt>Critical findings</dt><dd>{{ report.summary.by_severity.critical }}</dd></div>
+    <div class="stat"><dt>Files scanned</dt><dd>{{ report.summary.scanned_files }}</dd></div>
+  </dl>
   <p class="muted">{{ report.summary.skipped_files }} files skipped{% if report.summary.baseline_applied %} · {{ report.summary.resolved_findings }} baseline findings resolved{% endif %}. Credential values are redacted. Correlations reference the checks that contributed to them.</p>
-  {% if report.warnings %}
-  <section class="warning" aria-label="Incomplete scan">
-    <strong>Scan coverage is incomplete</strong>
-    <ul>{% for warning in report.warnings %}<li>{{ warning }}</li>{% endfor %}</ul>
+  {% if not report.summary.baseline_applied %}
+  <section class="notice" aria-labelledby="baseline-context">
+    <h2 id="baseline-context">No baseline supplied</h2>
+    <p>Findings are shown for review and are not classified as regressions. Supply a reviewed baseline to distinguish existing risks from new or escalated findings.</p>
   </section>
   {% endif %}
-  <section class="controls" aria-label="Filter findings">
-    <div class="control"><label for="search">Search findings</label><input id="search" type="search" placeholder="Rule, file, service, or remediation"></div>
-    <div class="control"><label for="severity">Severity</label><select id="severity"><option value="">All severities</option>{% for severity in severities %}<option value="{{ severity }}">{{ severity | title }}</option>{% endfor %}</select></div>
-    <div class="control"><label for="state">Baseline status</label><select id="state"><option value="">All findings</option><option value="new">New findings</option><option value="existing">Existing findings</option></select></div>
+  {% if report.warnings or not report.summary.complete %}
+  <section class="warning" aria-labelledby="coverage-warning">
+    <h2 id="coverage-warning">Scan coverage is incomplete</h2>
+    {% if report.warnings %}<ul>{% for warning in report.warnings %}<li>{{ warning }}</li>{% endfor %}</ul>{% else %}<p>Some scan coverage was unavailable. Findings apply only to the files that were covered.</p>{% endif %}
   </section>
-  <div id="visible-count" class="muted" role="status" aria-live="polite">{{ report.summary.findings }} findings</div>
-  <section id="findings" aria-label="Security findings">
+  {% endif %}
+  {% if priority_findings %}
+  <section class="priority" aria-labelledby="priority-heading">
+    <h2 id="priority-heading">Priority risks</h2>
+    <p>These connected checks represent combinations that deserve review before isolated findings.</p>
+    <ul>{% for finding in priority_findings %}<li><a href="#finding-{{ finding.fingerprint }}"><strong>{{ finding.rule_id }} — {{ finding.title }}</strong></a> <small>{{ finding.path }}:{{ finding.line }}{% if finding.service %} · {{ finding.service }}{% endif %}</small></li>{% endfor %}</ul>
+  </section>
+  {% endif %}
+  <section class="controls" aria-labelledby="filters-heading">
+    <h2 id="filters-heading" class="visually-hidden">Filter findings</h2>
+    <div class="control"><label for="search">Search findings</label><input id="search" type="search" aria-controls="findings" autocomplete="off" placeholder="Rule, file, service, or remediation"></div>
+    <div class="control"><label for="severity">Severity</label><select id="severity" aria-controls="findings"><option value="">All severities</option>{% for severity in severities %}<option value="{{ severity }}">{{ severity | title }} ({{ report.summary.by_severity[severity] }})</option>{% endfor %}</select></div>
+    <div class="control"><label for="state">Baseline status</label><select id="state" aria-controls="findings"><option value="">All findings</option>{% if report.summary.baseline_applied %}<option value="new">New or escalated</option><option value="existing">Existing findings</option>{% else %}<option value="unbaselined">Unbaselined findings</option>{% endif %}</select></div>
+    <div class="control"><label for="clear-filters">Reset</label><button id="clear-filters" type="button" aria-controls="findings">Clear filters</button></div>
+  </section>
+  <div id="visible-count" class="muted" role="status" aria-live="polite" aria-atomic="true">Showing {{ report.summary.findings }} of {{ report.summary.findings }} findings</div>
+  <section id="findings" aria-labelledby="findings-heading">
+    <h2 id="findings-heading" class="visually-hidden">Security findings</h2>
     {% for finding in report.findings %}
-    <article class="{{ finding.severity }}" data-severity="{{ finding.severity }}" data-state="{{ 'new' if finding.is_new else 'existing' }}" id="finding-{{ finding.fingerprint }}">
-      <div class="badges"><span class="badge {{ finding.severity }}">{{ finding.severity }}</span><span class="badge">{{ finding.rule_id }}</span><span class="badge">{{ finding.category }}</span><span class="badge {{ 'new' if finding.is_new else '' }}">{{ 'New' if finding.is_new else 'Existing' }}</span></div>
-      <h2>{{ finding.title }}</h2>
+    <article class="{{ finding.severity }}" data-severity="{{ finding.severity }}" data-state="{{ 'new' if report.summary.baseline_applied and finding.is_new else 'existing' if report.summary.baseline_applied else 'unbaselined' }}" id="finding-{{ finding.fingerprint }}" aria-labelledby="finding-title-{{ finding.fingerprint }}" tabindex="-1">
+      <div class="badges"><span class="badge {{ finding.severity }}">{{ finding.severity }}</span><span class="badge">{{ finding.rule_id }}</span><span class="badge">{{ finding.category }}</span><span class="badge {{ 'new' if report.summary.baseline_applied and finding.is_new else '' }}">{{ 'New or escalated' if report.summary.baseline_applied and finding.is_new else 'Existing' if report.summary.baseline_applied else 'Unbaselined' }}</span></div>
+      <h2 id="finding-title-{{ finding.fingerprint }}">{{ finding.title }}</h2>
       <p class="muted">Detection confidence: {{ finding.confidence }} · confidence describes the static indicator, not verified exploitability.</p>
       <p class="muted"><code>{{ finding.path }}:{{ finding.line }}</code>{% if finding.service %} · Service: <code>{{ finding.service }}</code>{% endif %}</p>
       <p>{{ finding.description }}</p>
       <div class="evidence"><code>{{ finding.evidence }}</code></div>
       <p class="fix"><strong>Recommended fix:</strong> {{ finding.remediation }}</p>
       {% if finding.related %}
-      <details><summary>{{ finding.related | length }} connected findings</summary><ul>{% for fingerprint in finding.related %}<li><a href="#finding-{{ fingerprint }}">Source finding {{ fingerprint[:12] }}</a></li>{% endfor %}</ul></details>
+      <details><summary>{{ finding.related | length }} connected findings</summary><ul>{% for fingerprint in finding.related %}{% set related = related_findings.get(fingerprint) %}{% if related %}<li><a href="#finding-{{ fingerprint }}">{{ related.rule_id }} — {{ related.title }} <small>{{ related.path }}:{{ related.line }}</small></a></li>{% endif %}{% endfor %}</ul></details>
       {% endif %}
     </article>
     {% endfor %}
   </section>
-  <p class="empty" id="empty" {% if report.findings %}hidden{% endif %}>{% if report.findings %}No findings match these filters.{% else %}No findings were detected in the scanned files.{% endif %}</p>
+  <p class="empty" id="empty" role="status" aria-live="polite" {% if report.findings %}hidden{% endif %}>{% if report.findings %}No findings match these filters.<br><button id="empty-clear" type="button">Clear filters</button>{% else %}{% if report.summary.complete %}<strong>Scan complete — no findings detected.</strong>{% else %}<strong>Scan coverage is incomplete — no findings detected in the covered files.</strong>{% endif %}<br>Review the coverage notes above, then keep this report with the scan context for future comparisons.{% endif %}</p>
   <footer>Generated locally by BastionBloom. No external assets or network requests. Findings are static indicators for review; runtime access, firewall rules, base-image users, and token validity are not verified.</footer>
 </main>
 <script nonce="{{ nonce }}">
@@ -100,7 +145,34 @@
   const search = document.getElementById('search');
   const severity = document.getElementById('severity');
   const state = document.getElementById('state');
-  function filter() {
+  const clear = document.getElementById('clear-filters');
+  const emptyClear = document.getElementById('empty-clear');
+  const visibleCount = document.getElementById('visible-count');
+  const empty = document.getElementById('empty');
+  let searchHistoryEntryOpen = false;
+
+  function updateUrl(mode = 'replace', hash = location.hash) {
+    // History URLs are not writable for every local-file browser context. The
+    // report still filters correctly there; URL persistence is best effort.
+    if (location.protocol === 'file:' || !window.history) return false;
+    const params = new URLSearchParams();
+    if (search.value) params.set('q', search.value);
+    if (severity.value) params.set('severity', severity.value);
+    if (state.value) params.set('state', state.value);
+    const url = new URL(location.href);
+    url.search = params.toString();
+    url.hash = hash || '';
+    if (url.href === location.href) return true;
+    const write = mode === 'push' ? history.pushState : history.replaceState;
+    try {
+      write.call(history, null, '', url.href);
+      return true;
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  function filter(historyMode = null, hash = location.hash) {
     const query = search.value.toLowerCase();
     let visible = 0;
     for (const card of cards) {
@@ -110,20 +182,96 @@
       card.hidden = !match;
       if (match) visible++;
     }
-    document.getElementById('visible-count').textContent = `${visible} of ${cards.length} findings`;
-    document.getElementById('empty').hidden = visible > 0;
+    visibleCount.textContent = `Showing ${visible} of ${cards.length} findings`;
+    empty.hidden = visible > 0;
+    if (historyMode) return updateUrl(historyMode, hash);
+    return true;
   }
-  search.addEventListener('input', filter);
-  severity.addEventListener('change', filter);
-  state.addEventListener('change', filter);
+
+  function clearFilters(historyMode = 'push', hash = location.hash) {
+    search.value = '';
+    severity.value = '';
+    state.value = '';
+    searchHistoryEntryOpen = false;
+    return filter(historyMode, hash);
+  }
+
+  function loadUrlState() {
+    const params = new URLSearchParams(location.search);
+    search.value = params.get('q') || '';
+    const severityValue = params.get('severity') || '';
+    const stateValue = params.get('state') || '';
+    severity.value = Array.from(severity.options).some(option => option.value === severityValue) ? severityValue : '';
+    state.value = Array.from(state.options).some(option => option.value === stateValue) ? stateValue : '';
+  }
+
+  function targetForHash(hash) {
+    const rawId = (hash || '').startsWith('#') ? hash.slice(1) : '';
+    if (!rawId) return null;
+    let id = rawId;
+    try {
+      id = decodeURIComponent(rawId);
+    } catch (_error) {
+      // A malformed percent escape is simply an unknown fragment.
+    }
+    return id ? document.getElementById(id) : null;
+  }
+
+  function focusHashTarget() {
+    const target = targetForHash(location.hash);
+    if (!target) return;
+    requestAnimationFrame(() => {
+      if (target.hidden) return;
+      target.focus({ preventScroll: true });
+      target.scrollIntoView({ block: 'start', inline: 'nearest' });
+    });
+  }
+
+  function revealHashTarget() {
+    const target = targetForHash(location.hash);
+    if (!target) return;
+    if (target.hidden) clearFilters('replace', location.hash);
+    focusHashTarget();
+  }
+
+  search.addEventListener('input', () => {
+    // Coalesce typing into one back-button step while keeping the URL live.
+    filter(searchHistoryEntryOpen ? 'replace' : 'push');
+    searchHistoryEntryOpen = true;
+  });
+  severity.addEventListener('change', () => {
+    searchHistoryEntryOpen = false;
+    filter('push');
+  });
+  state.addEventListener('change', () => {
+    searchHistoryEntryOpen = false;
+    filter('push');
+  });
+  clear.addEventListener('click', () => clearFilters());
+  if (emptyClear) emptyClear.addEventListener('click', () => clearFilters());
   document.querySelectorAll('a[href^="#finding-"]').forEach(link => {
-    link.addEventListener('click', () => {
-      search.value = '';
-      severity.value = '';
-      state.value = '';
-      filter();
+    link.addEventListener('click', event => {
+      const hash = link.getAttribute('href') || '';
+      const target = targetForHash(hash);
+      if (!target || !target.hidden) return;
+      // Make a single history entry for the navigated, unfiltered target so
+      // Back returns to the filtered view instead of an extra intermediate one.
+      event.preventDefault();
+      clearFilters('push', hash);
+      if (location.hash !== hash) location.hash = hash;
+      focusHashTarget();
     });
   });
+  window.addEventListener('popstate', () => {
+    searchHistoryEntryOpen = false;
+    loadUrlState();
+    filter();
+    revealHashTarget();
+  });
+  window.addEventListener('hashchange', revealHashTarget);
+  loadUrlState();
+  filter();
+  revealHashTarget();
 </script>
 </body>
 </html>
