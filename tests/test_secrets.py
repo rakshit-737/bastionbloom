@@ -30,6 +30,12 @@ def test_literal_json_credential_has_redacted_evidence():
     assert sensitive not in json.dumps(findings[0].to_dict())
 
 
+@pytest.mark.parametrize("name", ["AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN", "PRIVATE_KEY"])
+def test_common_provider_credential_names_are_detected(name):
+    findings = scan_secrets("settings.env", f"{name}=local-test-provider-secret")
+    assert [finding.rule.id for finding in findings] == ["SEC005"]
+
+
 @pytest.mark.parametrize("assignment", [
     'password = os.getenv("DB_PASSWORD")',
     "api_key = process.env.API_KEY",
