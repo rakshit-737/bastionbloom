@@ -73,6 +73,22 @@ def test_incomplete_scan_fails_even_with_threshold_disabled_and_cannot_baseline(
     assert not path.exists()
 
 
+def test_baseline_does_not_claim_findings_resolved_after_coverage_gap(tmp_path):
+    config = tmp_path / "config.yml"
+    config.write_text('password: "local-test-baseline-value"')
+    baseline = tmp_path / "accepted.json"
+    assert runner.invoke(app, ["baseline", str(tmp_path), "-o", str(baseline)]).exit_code == 0
+    config.write_text("x" * 2048)
+    result = runner.invoke(app, [
+        "scan", str(tmp_path), "--max-file-kb", "1", "--baseline", str(baseline),
+        "--format", "json", "--fail-on", "none",
+    ])
+    assert result.exit_code == 2
+    report = json.loads(result.stdout)
+    assert report["summary"]["resolved_findings"] == 0
+    assert report["summary"]["coverage_gaps"] == 1
+
+
 def test_invalid_baseline_error_does_not_echo_its_content(tmp_path):
     path = tmp_path / "bad.json"
     sensitive = "local-test-malformed-private-value"
@@ -113,6 +129,8 @@ def test_html_escapes_untrusted_paths_and_uses_nonce_csp(tmp_path):
     assert f"script-src 'nonce-{nonce}'" in report
     assert "<script src=" not in report
     assert "<link " not in report
+    assert str(tmp_path) not in report
+    assert "No baseline supplied" in report
 
 
 def test_html_command_writes_rendered_report(tmp_path):
@@ -121,6 +139,15 @@ def test_html_command_writes_rendered_report(tmp_path):
     assert result.exit_code == 0
     assert "BastionBloom" in output.read_text()
     assert "{{ report" not in output.read_text()
+
+
+def test_full_path_display_is_explicitly_opt_in(tmp_path):
+    hidden = runner.invoke(app, ["scan", str(tmp_path), "--format", "json"])
+    visible = runner.invoke(app, [
+        "scan", str(tmp_path), "--format", "json", "--show-full-path",
+    ])
+    assert str(tmp_path) not in hidden.stdout
+    assert str(tmp_path) in visible.stdout
 
 
 def test_sarif_output_is_valid_and_safe_for_code_scanning(tmp_path):

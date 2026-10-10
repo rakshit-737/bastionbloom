@@ -69,7 +69,10 @@ def _startup(ctx: typer.Context) -> None:
         ), style="cyan", markup=False, highlight=False)
 
 
-def _options(target, exclude, exclude_rule, no_gitignore, max_file_kb, artifacts=()):
+def _options(
+    target, exclude, exclude_rule, no_gitignore, max_file_kb, artifacts=(),
+    show_full_path=False,
+):
     patterns = list(exclude or [])
     root = target.resolve()
     for artifact in artifacts:
@@ -81,6 +84,7 @@ def _options(target, exclude, exclude_rule, no_gitignore, max_file_kb, artifacts
     return ScanOptions(
         max_file_bytes=max_file_kb * 1024, respect_gitignore=not no_gitignore,
         exclude=tuple(patterns), exclude_rules=frozenset(exclude_rule or []),
+        show_full_path=show_full_path,
     )
 
 
@@ -102,6 +106,9 @@ def scan_command(
     exclude: list[str] | None = typer.Option(None, help="Additional ignore glob; repeatable."),
     exclude_rule: list[str] | None = typer.Option(None, help="Disable a rule ID; repeatable."),
     max_file_kb: int = typer.Option(1024, min=1, help="Maximum scanned file size in KiB."),
+    show_full_path: bool = typer.Option(
+        False, "--show-full-path", help="Include the absolute scan target in reports."
+    ),
 ):
     """Scan a project. Exit 0: threshold passed; 1: new risks; 2: incomplete scan/error."""
     if output is not None and baseline is not None and output.resolve() == baseline.resolve():
@@ -112,6 +119,7 @@ def scan_command(
         previous = load_baseline(baseline) if baseline else None
         result = run_scan(target, _options(
             target, exclude, exclude_rule, no_gitignore, max_file_kb, (output, baseline),
+            show_full_path,
         ))
         if previous is not None:
             apply_baseline(result, previous)
@@ -135,7 +143,7 @@ def scan_command(
         _error(str(error))
     except OSError:
         _error("Unable to read scan inputs or write the report; check paths and permissions")
-    if result.warnings:
+    if not result.complete:
         raise typer.Exit(2)
     if fail_on != Threshold.none and result.fails_threshold(Severity(fail_on.value)):
         raise typer.Exit(1)
@@ -150,12 +158,16 @@ def baseline_command(
     exclude: list[str] | None = typer.Option(None),
     exclude_rule: list[str] | None = typer.Option(None),
     max_file_kb: int = typer.Option(1024, min=1),
+    show_full_path: bool = typer.Option(
+        False, "--show-full-path", help="Include the absolute scan target in the baseline output."
+    ),
 ):
     """Record current findings for later comparison; existing risks stay visible."""
     _startup(ctx)
     try:
         result = run_scan(target, _options(
             target, exclude, exclude_rule, no_gitignore, max_file_kb, (output,),
+            show_full_path,
         ))
         print_console(result, console)
         save_baseline(result, output)
